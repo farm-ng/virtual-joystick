@@ -44,7 +44,6 @@ Config.set("input", "mouse", "mouse,disable_on_activity")
 Config.set("kivy", "keyboard_mode", "systemanddock")
 
 from kivy.app import App  # noqa: E402
-from kivy.clock import Clock  # noqa: E402
 from kivy.graphics.texture import Texture  # noqa: E402
 from kivy.lang.builder import Builder  # noqa: E402
 from kivy.properties import StringProperty  # noqa: E402
@@ -75,9 +74,6 @@ class VirtualJoystickApp(App):
         self.image_decoder = TurboJPEG()
 
         self.async_tasks: List[asyncio.Task] = []
-
-        # Schedule the drawing of the joystick at 30 hz
-        Clock.schedule_interval(self.update_labels, 1 / 30)
 
     def build(self):
         return Builder.load_file("main.kv")
@@ -169,7 +165,13 @@ class VirtualJoystickApp(App):
             for proto in response.messages.messages:
                 amiga_tpdo1: Optional[AmigaTpdo1] = parse_amiga_tpdo1_proto(proto)
                 if amiga_tpdo1:
+                    # Store the value for possible other uses
                     self.amiga_tpdo1 = amiga_tpdo1
+
+                    # Update the Label values as they are received
+                    self.amiga_state = AmigaControlState(amiga_tpdo1.state).name[6:]
+                    self.amiga_speed = str(amiga_tpdo1.meas_speed)
+                    self.amiga_rate = str(amiga_tpdo1.meas_ang_rate)
 
     async def stream_camera(self, client: OakCameraClient) -> None:
         """This task listens to the camera client's stream and populates the tabbed panel with all 4 image streams
@@ -286,12 +288,6 @@ class VirtualJoystickApp(App):
             )
             yield canbus_pb2.SendCanbusMessageRequest(message=msg)
             await asyncio.sleep(period)
-
-    def update_labels(self, dt: float = 0.0) -> None:
-        """Updates the `StringProperty` strings displayed as `Label` widgets."""
-        self.amiga_state = AmigaControlState(self.amiga_tpdo1.state).name[6:]
-        self.amiga_speed = str(self.amiga_tpdo1.meas_speed)
-        self.amiga_rate = str(self.amiga_tpdo1.meas_ang_rate)
 
 
 if __name__ == "__main__":
