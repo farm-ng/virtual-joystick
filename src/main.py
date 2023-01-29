@@ -69,15 +69,37 @@ RelativeLayout:
             pos: self.parent.pos
             size: self.parent.size
     BoxLayout:
+        orientation: 'horizontal'
         BoxLayout:
             size_hint_x: 0.3
             orientation: 'vertical'
+            Widget:
+                size_hint_y: 2.0
             Label:
-                text: "state:\\n" + str(app.amiga_state)
+                text: "Amiga State:"
+                font_size: 18
+                size_hint_y: 0.5
             Label:
-                text: "speed:\\n" + str(app.amiga_speed) + "  [m/s]"
+                text: app.amiga_state
+                font_size: 18
+            Widget: # Empty placeholder
             Label:
-                text: "angular rate:\\n" + str(app.amiga_rate) + "  [rad/s]"
+                text: "Speed [m/s]:"
+                font_size: 18
+                size_hint_y: 0.5
+            Label:
+                text: app.amiga_speed
+                font_size: 18
+            Widget: # Empty placeholder
+            Label:
+                text: "Angular Rate [rad/s]:"
+                font_size: 18
+                size_hint_y: 0.5
+            Label:
+                text: app.amiga_rate
+                font_size: 18
+            Widget:
+                size_hint_y: 2.0
         VirtualJoystickWidget:
             id: joystick
         TabbedPanel:
