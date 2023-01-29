@@ -62,7 +62,7 @@ class VirtualJoystickWidget(Widget):
         NOTE: This is called regardless of whether this is the touched widget.
         """
         # Reset joystick pose, regardless of where touch_up occurs
-        self.joystick_pose: Vec2 = Vec2()
+        self.joystick_pose = Vec2()
 
     def update_joystick_pose(self, touch: MouseMotionEvent) -> None:
         assert self.collide_point(*touch.pos), "Only pass touches "

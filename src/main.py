@@ -14,7 +14,6 @@
 import argparse
 import asyncio
 import os
-from typing import Generator
 from typing import List
 from typing import Optional
 
@@ -132,7 +131,7 @@ class VirtualJoystickApp(App):
         while self.root is None:
             await asyncio.sleep(0.01)
 
-        response_stream: Optional[Generator[canbus_pb2.StreamCanbusReply]] = None
+        response_stream = None
 
         while True:
             # check the state of the service
