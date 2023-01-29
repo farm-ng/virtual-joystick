@@ -78,16 +78,10 @@ class VirtualJoystickApp(App):
         self.async_tasks: List[asyncio.Task] = []
 
         # Schedule the drawing of the joystick at 30 hz
-        Clock.schedule_interval(self.update_kivy_strings, 1 / 30)
+        Clock.schedule_interval(self.update_labels, 1 / 30)
 
     def build(self):
         return Builder.load_file("main.kv")
-
-    def update_kivy_strings(self, dt: float = 0.0) -> None:
-        """Updates the `StringProperty` strings displayed as `Label` widgets."""
-        self.amiga_state = AmigaControlState(self.amiga_tpdo1.state).name[6:]
-        self.amiga_speed = str(self.amiga_tpdo1.meas_speed)
-        self.amiga_rate = str(self.amiga_tpdo1.meas_ang_rate)
 
     def on_exit_btn(self) -> None:
         """Kills the running kivy application."""
@@ -293,6 +287,12 @@ class VirtualJoystickApp(App):
             )
             yield canbus_pb2.SendCanbusMessageRequest(message=msg)
             await asyncio.sleep(period)
+
+    def update_labels(self, dt: float = 0.0) -> None:
+        """Updates the `StringProperty` strings displayed as `Label` widgets."""
+        self.amiga_state = AmigaControlState(self.amiga_tpdo1.state).name[6:]
+        self.amiga_speed = str(self.amiga_tpdo1.meas_speed)
+        self.amiga_rate = str(self.amiga_tpdo1.meas_ang_rate)
 
 
 if __name__ == "__main__":
