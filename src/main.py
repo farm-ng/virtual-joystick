@@ -53,7 +53,6 @@ from kivy.properties import StringProperty  # noqa: E402
 from kivy.app import App  # noqa: E402
 from kivy.lang.builder import Builder  # noqa: E402
 from kivy.uix.widget import Widget  # noqa: E402
-from kivy.core.window import Window  # noqa: E402
 
 kv = """
 <VirtualJoystickWidget@Widget>:
@@ -102,22 +101,6 @@ RelativeLayout:
 """
 
 
-def relative_cord_in_widget(
-    widget: Widget, touch: MouseMotionEvent, scale: Tuple[float, float] = (-1.0, 1.0)
-) -> Optional[Tuple[float, float]]:
-    """Returns the coordinates of the touch on the scale IFF it occurs within the bounds of the widget."""
-    x_s: Tuple[int, int] = (widget.pos[0], widget.pos[0] + widget.width)
-    y_s: Tuple[int, int] = (widget.pos[1], widget.pos[1] + widget.height)
-
-    if not (x_s[0] < touch.x < x_s[1]) or not (y_s[0] < touch.y < y_s[1]):
-        return None
-
-    return (
-        scale[0] + (touch.x - x_s[0]) * (scale[1] - scale[0]) / (widget.width),
-        scale[0] + (touch.y - y_s[0]) * (scale[1] - scale[0]) / (widget.height),
-    )
-
-
 class Vec2:
     """Simple container for keeping joystick coords in x & y terms.
 
@@ -135,6 +118,57 @@ class VirtualJoystickWidget(Widget):
 
         self.joystick_pose: Vec2 = Vec2()
         self.joystick_rad: int = 100
+
+    def on_touch_down(self, touch: MouseMotionEvent) -> None:
+        """Overwrite kivy method that handles initial press with mouse click or touchscreen.
+
+        NOTE: This is called regardless of whether this is the touched widget.
+        """
+        # Check if touch is in this widget using kivy ``collide_point`` method
+        if not self.collide_point(*touch.pos):
+            return
+
+        self.update_joystick_pose(touch)
+
+    def on_touch_move(self, touch: MouseMotionEvent) -> None:
+        """Overwrite kivy method that handles when press is held and dragged with mouse click or touchscreen.
+
+        NOTE: This is called regardless of whether this is the touched widget.
+        """
+        # Check if touch is in this widget using kivy ``collide_point`` method
+        if not self.collide_point(*touch.pos):
+            return
+
+        self.update_joystick_pose(touch)
+
+    def on_touch_up(self, touch: MouseMotionEvent) -> None:
+        """Overwrite kivy method that handles release of press with mouse click or touchscreen.
+
+        NOTE: This is called regardless of whether this is the touched widget.
+        """
+        # Reset joystick pose, regardless of where touch_up occurs
+        self.joystick_pose: Vec2 = Vec2()
+
+    def update_joystick_pose(self, touch: MouseMotionEvent) -> None:
+        assert self.collide_point(*touch.pos), "Only pass touches "
+
+        res: Tuple[float, float] = self.relative_cord_in_widget(touch)
+
+        # Clip to unit circle
+        div: float = max(1.0, sqrt(res[0] ** 2 + res[1] ** 2))
+        self.joystick_pose = Vec2(x=res[0] / div, y=res[1] / div)
+
+    def relative_cord_in_widget(self, touch: MouseMotionEvent) -> Tuple[float, float]:
+        """Returns the coordinates of the touch on the scale IFF it occurs within the bounds of the widget."""
+
+        # Range to put the values on
+        scale: Tuple[float, float] = (-1.0, 1.0)
+
+        # Map coord onto scale range
+        return (
+            scale[0] + (touch.x - self.pos[0]) * (scale[1] - scale[0]) / (self.width),
+            scale[0] + (touch.y - self.pos[1]) * (scale[1] - scale[0]) / (self.height),
+        )
 
     def draw(self) -> None:
         self.canvas.clear()
@@ -191,65 +225,6 @@ class VirtualJoystickApp(App):
         self.async_tasks: List[asyncio.Task] = []
 
     def build(self):
-        def on_touch_down(window: Window, touch: MouseMotionEvent) -> bool:
-            """Handles initial press with mouse click or touchscreen."""
-            if isinstance(touch, MouseMotionEvent) and int(
-                os.environ.get("DISABLE_KIVY_MOUSE_EVENTS", 0)
-            ):
-                return True
-            for w in window.children[:]:
-                if w.dispatch("on_touch_down", touch):
-                    return True
-
-            joystick: VirtualJoystickWidget = self.root.ids["joystick"]
-            res: Optional[Tuple[float, float]] = relative_cord_in_widget(
-                widget=joystick, touch=touch
-            )
-            if res:
-                # Clip to unit circle
-                div: float = max(1.0, sqrt(res[0] ** 2 + res[1] ** 2))
-                joystick.joystick_pose = Vec2(x=res[0] / div, y=res[1] / div)
-            return False
-
-        def on_touch_move(window: Window, touch: MouseMotionEvent) -> bool:
-            """Handles when press is held and dragged with mouse click or touchscreen."""
-            if isinstance(touch, MouseMotionEvent) and int(
-                os.environ.get("DISABLE_KIVY_MOUSE_EVENTS", 0)
-            ):
-                return True
-            for w in window.children[:]:
-                if w.dispatch("on_touch_move", touch):
-                    return True
-
-            joystick: VirtualJoystickWidget = self.root.ids["joystick"]
-
-            res: Optional[Tuple[float, float]] = relative_cord_in_widget(
-                widget=joystick, touch=touch
-            )
-            if res:
-                # Clip to unit circle
-                div: float = max(1.0, sqrt(res[0] ** 2 + res[1] ** 2))
-                joystick.joystick_pose = Vec2(x=res[0] / div, y=res[1] / div)
-            return False
-
-        def on_touch_up(window: Window, touch: MouseMotionEvent) -> bool:
-            """Handles release of press with mouse click or touchscreen."""
-            if isinstance(touch, MouseMotionEvent) and int(
-                os.environ.get("DISABLE_KIVY_MOUSE_EVENTS", 0)
-            ):
-                return True
-            for w in window.children[:]:
-                if w.dispatch("on_touch_up", touch):
-                    return True
-            joystick: VirtualJoystickWidget = self.root.ids["joystick"]
-
-            joystick.joystick_pose = Vec2()
-            return False
-
-        Window.bind(on_touch_down=on_touch_down)
-        Window.bind(on_touch_move=on_touch_move)
-        Window.bind(on_touch_up=on_touch_up)
-
         return Builder.load_string(kv)
 
     def update_kivy_strings(self) -> None:
