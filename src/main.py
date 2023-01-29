@@ -76,7 +76,7 @@ class VirtualJoystickApp(App):
         self.async_tasks: List[asyncio.Task] = []
 
     def build(self):
-        return Builder.load_file("main.kv")
+        return Builder.load_file("res/main.kv")
 
     def on_exit_btn(self) -> None:
         """Kills the running kivy application."""
