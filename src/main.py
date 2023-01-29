@@ -46,81 +46,13 @@ Config.set("graphics", "fullscreen", "false")
 Config.set("input", "mouse", "mouse,disable_on_activity")
 Config.set("kivy", "keyboard_mode", "systemanddock")
 
-from kivy.graphics import Color, Ellipse  # noqa: E402
+from kivy.app import App  # noqa: E402
+from kivy.clock import Clock  # noqa: E402
 from kivy.graphics.texture import Texture  # noqa: E402
 from kivy.input.providers.mouse import MouseMotionEvent  # noqa: E402
-from kivy.properties import StringProperty  # noqa: E402
-from kivy.app import App  # noqa: E402
 from kivy.lang.builder import Builder  # noqa: E402
+from kivy.properties import StringProperty  # noqa: E402
 from kivy.uix.widget import Widget  # noqa: E402
-
-kv = """
-<VirtualJoystickWidget@Widget>:
-RelativeLayout:
-    Button:
-        id: back_btn_layout
-        pos_hint: {"x": 0.0, "top": 1.0}
-        background_color: 0, 0, 0, 0
-        size_hint: 0.1, 0.1
-        background_normal: "assets/back_button.png"
-        on_release: app.on_exit_btn()
-        Image:
-            source: "assets/back_button_normal.png" if self.parent.state == "normal" else "assets/back_button_down.png"
-            pos: self.parent.pos
-            size: self.parent.size
-    BoxLayout:
-        orientation: 'horizontal'
-        BoxLayout:
-            size_hint_x: 0.3
-            orientation: 'vertical'
-            Widget:
-                size_hint_y: 2.0
-            Label:
-                text: "Amiga State:"
-                font_size: 18
-                size_hint_y: 0.5
-            Label:
-                text: app.amiga_state
-                font_size: 18
-            Widget: # Empty placeholder
-            Label:
-                text: "Speed [m/s]:"
-                font_size: 18
-                size_hint_y: 0.5
-            Label:
-                text: app.amiga_speed
-                font_size: 18
-            Widget: # Empty placeholder
-            Label:
-                text: "Angular Rate [rad/s]:"
-                font_size: 18
-                size_hint_y: 0.5
-            Label:
-                text: app.amiga_rate
-                font_size: 18
-            Widget:
-                size_hint_y: 2.0
-        VirtualJoystickWidget:
-            id: joystick
-        TabbedPanel:
-            do_default_tab: False
-            TabbedPanelItem:
-                text: "Rgb"
-                Image:
-                    id: rgb
-            TabbedPanelItem:
-                text: "Disparity"
-                Image:
-                    id: disparity
-            TabbedPanelItem:
-                text: "Left"
-                Image:
-                    id: left
-            TabbedPanelItem:
-                text: "Right"
-                Image:
-                    id: right
-"""
 
 
 class Vec2:
@@ -133,13 +65,18 @@ class Vec2:
         self.x: float = min(max(-1.0, x), 1.0)
         self.y: float = min(max(-1.0, y), 1.0)
 
+    def __str__(self) -> str:
+        return f"({self.x:0.2f}, {self.y:0.2f})"
+
 
 class VirtualJoystickWidget(Widget):
     def __init__(self, **kwargs) -> None:
         super(VirtualJoystickWidget, self).__init__(**kwargs)
 
         self.joystick_pose: Vec2 = Vec2()
-        self.joystick_rad: int = 100
+
+        # Schedule the drawing of the joystick at 30 hz
+        Clock.schedule_interval(self.draw_joystick, 1 / 30)
 
     def on_touch_down(self, touch: MouseMotionEvent) -> None:
         """Overwrite kivy method that handles initial press with mouse click or touchscreen.
@@ -192,39 +129,26 @@ class VirtualJoystickWidget(Widget):
             scale[0] + (touch.y - self.pos[1]) * (scale[1] - scale[0]) / (self.height),
         )
 
-    def draw(self) -> None:
-        self.canvas.clear()
-
-        # Draw background circle
-        self.canvas.add(Color(0.2, 0.2, 0.2, 1.0, mode="rgba"))
-        self.canvas.add(
-            Ellipse(
-                pos=(self.center_x - self.width // 2, self.center_y - self.height // 2),
-                size=(self.width, self.height),
-            )
-        )
-
-        # Draw joystick at position
-        x_abs, y_abs = (
+    def draw_joystick(self, dt: float = 0.0):
+        """Update the drawn pose of the joystick, in pixel coords."""
+        self.joystick_position_x = (
             self.center_x
-            + 0.5 * self.joystick_pose.x * (self.width - 2 * self.joystick_rad),
-            self.center_y
-            + 0.5 * self.joystick_pose.y * (self.height - 2 * self.joystick_rad),
+            + 0.5 * self.joystick_pose.x * (self.width - self.joystick_diameter)
+            - self.joystick_diameter // 2
         )
-        self.canvas.add(Color(1.0, 1.0, 0.0, 1.0, mode="rgba"))
-        self.canvas.add(
-            Ellipse(
-                pos=(x_abs - self.joystick_rad, y_abs - self.joystick_rad),
-                size=(self.joystick_rad * 2, self.joystick_rad * 2),
-            )
+
+        self.joystick_position_y = (
+            self.center_y
+            + 0.5 * self.joystick_pose.y * (self.height - self.joystick_diameter)
+            - self.joystick_diameter // 2
         )
 
 
 class VirtualJoystickApp(App):
     # For kivy labels
+    amiga_state = StringProperty("???")
     amiga_speed = StringProperty("???")
     amiga_rate = StringProperty("???")
-    amiga_state = StringProperty("NO CANBUS\nSERVICE DETECTED")
 
     def __init__(
         self, address: str, camera_port: int, canbus_port: int, stream_every_n: int
@@ -246,10 +170,13 @@ class VirtualJoystickApp(App):
 
         self.async_tasks: List[asyncio.Task] = []
 
-    def build(self):
-        return Builder.load_string(kv)
+        # Schedule the drawing of the joystick at 30 hz
+        Clock.schedule_interval(self.update_kivy_strings, 1 / 30)
 
-    def update_kivy_strings(self) -> None:
+    def build(self):
+        return Builder.load_file("main.kv")
+
+    def update_kivy_strings(self, dt: float = 0.0) -> None:
         """Updates the `StringProperty` strings displayed as `Label` widgets."""
         self.amiga_state = AmigaControlState(self.amiga_tpdo1.state).name[6:]
         self.amiga_speed = str(self.amiga_tpdo1.meas_speed)
@@ -291,9 +218,6 @@ class VirtualJoystickApp(App):
         self.async_tasks.append(
             asyncio.ensure_future(self.send_can_msgs(canbus_client))
         )
-
-        # Drawing task(s)
-        self.async_tasks.append(asyncio.ensure_future(self.draw()))
 
         return await asyncio.gather(run_wrapper(), *self.async_tasks)
 
@@ -462,16 +386,6 @@ class VirtualJoystickApp(App):
             )
             yield canbus_pb2.SendCanbusMessageRequest(message=msg)
             await asyncio.sleep(period)
-
-    async def draw(self) -> None:
-        """Loop over drawing the VirtualJoystickWidget."""
-        while self.root is None:
-            await asyncio.sleep(0.01)
-        joystick: VirtualJoystickWidget = self.root.ids["joystick"]
-        while True:
-            joystick.draw()
-            self.update_kivy_strings()
-            await asyncio.sleep(0.01)
 
 
 if __name__ == "__main__":
