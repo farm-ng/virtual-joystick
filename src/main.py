@@ -60,7 +60,7 @@ class VirtualJoystickApp(App):
         self, address: str, camera_port: int, canbus_port: int, stream_every_n: int
     ) -> None:
         super().__init__()
-        self.address: int = address
+        self.address: str = address
         self.camera_port: int = camera_port
         self.canbus_port: int = canbus_port
         self.stream_every_n: int = stream_every_n
