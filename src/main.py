@@ -18,6 +18,7 @@ from typing import List
 from typing import Optional
 
 import grpc
+import virtual_joystick
 from farm_ng.canbus import canbus_pb2
 from farm_ng.canbus.canbus_client import CanbusClient
 from farm_ng.canbus.packet import AmigaControlState
@@ -76,6 +77,9 @@ class VirtualJoystickApp(App):
         self.async_tasks: List[asyncio.Task] = []
 
     def build(self):
+        # Build the imported ``VirtualJoystickWidget`` .kv file first
+        Builder.load_file(os.path.dirname(virtual_joystick.__file__) + "/joystick.kv")
+        # Then build the App's .kv file (which references the VirtualJoystickWidget)
         return Builder.load_file("res/main.kv")
 
     def on_exit_btn(self) -> None:
