@@ -6,7 +6,7 @@ This repository is an example of an app you can create with the [`amiga-app-temp
 
 This app can be cloned directly onto your amiga and used!
 
-Just follow the instructions about `ssh`'ing into your AMiga and cloning custom apps on:
+Just follow the instructions about `ssh`'ing into your Amiga and cloning custom apps on:
 
 [amiga.farm-ng.com - **Developing Custom Applications**](https://amiga.farm-ng.com/docs/brain/brain-apps).
 
@@ -14,7 +14,7 @@ Just follow the instructions about `ssh`'ing into your AMiga and cloning custom 
 
 We have a tutorial available that goes line-by-line through the development of this app available at:
 
-[amiga.farm-ng.com - **Virtual Joystick Tutorial**](https://amiga.farm-ng.com/docs/examples/virtual_joystick/virtual-joystick-overview).
+[amiga.farm-ng.com - **Virtual Joystick Tutorial**](https://amiga.farm-ng.com/docs/tutorials/virtual_joystick/virtual-joystick-overview).
 
 
 ## Create your own app
