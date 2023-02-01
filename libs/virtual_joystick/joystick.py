@@ -22,6 +22,7 @@ os.environ["KIVY_NO_ARGS"] = "1"
 
 from kivy.clock import Clock  # noqa: E402
 from kivy.input.providers.mouse import MouseMotionEvent  # noqa: E402
+from kivy.lang.builder import Builder  # noqa: E402
 from kivy.uix.widget import Widget  # noqa: E402
 
 
@@ -33,6 +34,10 @@ class VirtualJoystickWidget(Widget):
 
         # Schedule the drawing of the joystick at 30 hz
         Clock.schedule_interval(self.draw_joystick, 1 / 30)
+
+        # Build the .kv file for this VirtualJoystickWidget
+        # This is so it is included when your app imports the VirtualJoystickWidget
+        Builder.load_file(os.path.join(os.path.dirname(__file__), "res/joystick.kv"))
 
     def on_touch_down(self, touch: MouseMotionEvent) -> None:
         """Overwrite kivy method that handles initial press with mouse click or touchscreen.
