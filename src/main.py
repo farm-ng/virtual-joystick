@@ -18,7 +18,6 @@ from typing import List
 from typing import Optional
 
 import grpc
-import virtual_joystick
 from farm_ng.canbus import canbus_pb2
 from farm_ng.canbus.canbus_client import CanbusClient
 from farm_ng.canbus.packet import AmigaControlState
