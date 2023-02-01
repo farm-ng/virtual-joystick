@@ -77,9 +77,9 @@ class VirtualJoystickApp(App):
         self.async_tasks: List[asyncio.Task] = []
 
     def build(self):
-        # Build the imported ``VirtualJoystickWidget`` .kv file first
-        Builder.load_file(os.path.dirname(virtual_joystick.__file__) + "/joystick.kv")
-        # Then build the App's .kv file (which references the VirtualJoystickWidget)
+        # Build the ``VirtualJoystickWidget`` .kv file first, so it can be used in "res/main.kv"
+        Builder.load_file("res/joystick.kv")
+        # Then build the App's .kv file
         return Builder.load_file("res/main.kv")
 
     def on_exit_btn(self) -> None:
