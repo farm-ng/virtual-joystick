@@ -76,7 +76,6 @@ class VirtualJoystickApp(App):
         self.async_tasks: List[asyncio.Task] = []
 
     def build(self):
-        # Build the App's .kv file
         return Builder.load_file("res/main.kv")
 
     def on_exit_btn(self) -> None:
